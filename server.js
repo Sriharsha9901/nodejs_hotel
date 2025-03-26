@@ -1,6 +1,10 @@
 const express=require('express');
 const app = express()
 const db=require('./db');
+require('dotenv').config();
+
+const port=process.env.PORT||3000;
+
 
 const bodyParser=require('body-parser');
 app.use(bodyParser.json());
@@ -17,4 +21,6 @@ app.get('/', function (req, res) {
   res.send('Welcome to the hotel')
 })
 
-app.listen(3000)
+app.listen(port,()=>{
+  console.log('Server started'); 
+})
