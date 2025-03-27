@@ -1,22 +1,81 @@
 const express=require('express');
 const router=express.Router();
 const person=require('./../models/Person');
+const {jwtAuthMiddleware, generateToken}=require('./../jwt');
+
 //to add a person
-router.post('/',async (req,res)=>{
+router.post('/signup',async (req,res)=>{
     try{
         const data=req.body;
         const newPerson=new person(data);
 
         const response= await newPerson.save();
+
         console.log('person saved successfully');
-        res.status(200).json(response);
+
+        const payload={
+            id:response.id,
+            username:response.username
+        }
+        //generate token
+        const token=generateToken(payload);
+
+        res.status(200).json({response:response,token:token});
     }catch(err){
         console.log(err);
         res.status(500).json({error:'internal server error'})   
     }
 })
+
+//login route
+router.post('/login', async(req,res)=>{
+    try{
+        const {username,password}=req.body;
+
+        //find user by username
+        const user=await person.findOne({username:username});
+        
+
+        if(!user||!(await user.comparePassword(password))){
+            return res.status(401).json({error:'Invalid username or password'});
+        }
+        //generate token
+        const payload={
+            id:user.id,
+            username:user.username
+        }   
+        const token = generateToken(payload);
+
+        //return token as response
+        res.json({token});
+
+
+    }catch(err){
+        console.error(err);
+        
+        res.status(500).json({error:'Internal server error'})
+    }
+})
+
+//profile
+router.get('/profile',jwtAuthMiddleware,async(req, res)=>{
+    try{
+        const userData=req.user;
+
+        const id=userData.id;
+
+        const user=await person.findById(id);
+
+        res.status(200).json(user);
+    }catch(err){
+        console.error(err);
+        res.status(500).json('Internal server error')
+        
+    }
+})
+
 //to get all person
-router.get('/',async (req,res)=>{
+router.get('/',jwtAuthMiddleware ,async (req,res)=>{
     try{
         const response= await person.find();
         console.log('Person fetched successfully');
